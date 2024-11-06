@@ -1314,7 +1314,7 @@ const char *mtsGalilController::RobotData::GetGalilAxes(const bool *galilIndexVa
     return galilMaskString;
 }
 
-bool mtsGalilController::RobotData::CheckHomingMask(const char *cmdName, const vctBoolVec &inMask, vctBoolVec &outMask) const
+bool mtsGalilController::RobotData::CheckHomingMask(const char *cmdName, const vctBoolVec &inMask, vctBoolVec &outMask)
 {
     if (inMask.size() != outMask.size()) {
         mInterface->SendError(name + ": size mismatch in " + std::string(cmdName));
@@ -1326,10 +1326,10 @@ bool mtsGalilController::RobotData::CheckHomingMask(const char *cmdName, const v
         // Can't home or unhome absolute encoder
         outMask[i] = inMask[i] & (!mEncoderAbsolute[i]);
         if (outMask[i] && (mState[i] != ST_IDLE)) {
-            outMask[i] = false;
             char buf[64];
-            sprintf(buf, ": %s ignored for axis %d (not idle)", cmdName, static_cast<int>(i));
+            sprintf(buf, ": %s restarting for axis %d", cmdName, static_cast<int>(i));
             mInterface->SendWarning(name + buf);
+            mState[i] = ST_IDLE;
         }
     }
     if (!outMask.Any())

@@ -213,9 +213,9 @@ protected:
         // Local method to create axes string for specified array of valid Galil indices
         const char *GetGalilAxes(const bool *galilIndexValid) const;
         // Local method to set outMask based on inMask, clearing any entries that correspond to absolute encoders.
-        // The method returns false if the inMask is not the correct length (same length as outMask), if the robot
-        // is currently homing, or if none of the elements in outMask are true.
-        bool CheckHomingMask(const char *cmdName, const vctBoolVec &inMask, vctBoolVec &outMask) const;
+        // The method returns false if the inMask is not the correct length (same length as outMask),
+        // or if none of the elements in outMask are true.
+        bool CheckHomingMask(const char *cmdName, const vctBoolVec &inMask, vctBoolVec &outMask);
 
         // Local method to set operating state to fault
         void SetFault();
