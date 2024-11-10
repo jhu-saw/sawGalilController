@@ -252,6 +252,7 @@ void mtsGalilController::SetupInterfaces(void)
             prov->AddCommandReadState(StateTable, StateTable.PeriodStats, "period_statistics");
             prov->AddCommandRead(&mtsGalilController::GetHeader, this, "GetHeader");
             prov->AddCommandRead(&mtsGalilController::GetConnected, this, "GetConnected");
+            prov->AddCommandRead(&mtsGalilController::GetVersion, this, "GetVersion");
             prov->AddCommandWrite(&mtsGalilController::SendCommand, this, "SendCommand");
             prov->AddCommandWriteReturn(&mtsGalilController::SendCommandRet, this, "SendCommandRet");
             prov->AddCommandReadState(this->StateTable, mSampleNum, "GetSampleNum");
@@ -498,6 +499,7 @@ void mtsGalilController::Configure(const std::string& fileName)
 
 void mtsGalilController::Startup()
 {
+#ifndef SIMULATION
     std::string GalilString = m_configuration.IP_address;
     if (m_configuration.direct_mode) {
         GalilString.append(" -d");
@@ -538,7 +540,7 @@ void mtsGalilController::Startup()
 
     // Check limit and home switch configuration
     mLimitSwitchActiveLow = true;         // Active low (default)
-        double cn0 = QueryValueDouble("MG _CN0");
+    double cn0 = QueryValueDouble("MG _CN0");
     if (cn0 == 1.0) {
         mLimitSwitchActiveLow = false;    // Active high
     }
@@ -676,6 +678,7 @@ void mtsGalilController::Startup()
         // Close connection so we do not hang waiting for data
         Close();
     }
+#endif
 }
 
 void mtsGalilController::Run()

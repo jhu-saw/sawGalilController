@@ -284,6 +284,8 @@ protected:
 
     void GetHeader(uint32_t &header) const { header = mHeader; }
     void GetConnected(bool &val) const { val = (mGalil != 0); }
+    void GetVersion(std::string &ver) const
+    { ver = sawGalilController_VERSION; }
 
     void SendCommand(const std::string& cmdString);
     void SendCommandRet(const std::string& cmdString, std::string &retString);
