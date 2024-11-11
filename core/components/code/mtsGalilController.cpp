@@ -147,7 +147,7 @@ const bool _HasUserDataZA[NUM_MODELS]          = { true, true, true, false, fals
 // Whether controller supports the HV (homing velocity) command
 const bool _HasHomingVelocity[NUM_MODELS]      = { true, true, true, false, false, true };
 
-CMN_IMPLEMENT_SERVICES_DERIVED_ONEARG(mtsGalilController, mtsTaskContinuous, mtsStdString)
+CMN_IMPLEMENT_SERVICES_DERIVED_ONEARG(mtsGalilController, mtsTaskContinuous, mtsTaskContinuousConstructorArg);
 
 mtsGalilController::mtsGalilController(const std::string &name) :
 
