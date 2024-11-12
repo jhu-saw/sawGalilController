@@ -478,9 +478,9 @@ void mtsGalilController::Configure(const std::string& fileName)
         mRobots[i].m_op_state.SetIsHomed(mRobots[i].mActuatorState.IsHomed().All());
 
         // Default values should be read from JSON file
-        mRobots[i].mSpeedDefault.SetAll(0.025);   // 25 mm/s
-        mRobots[i].mAccelDefault.SetAll(0.256);   // 256 mm/s^2
-        mRobots[i].mDecelDefault.SetAll(0.256);   // 256 mm/s^2
+        mRobots[i].mSpeedDefault.SetAll(0.01);   //  10 mm/s
+        mRobots[i].mAccelDefault.SetAll(0.10);   // 100 mm/s^2
+        mRobots[i].mDecelDefault.SetAll(0.10);   // 100 mm/s^2
     }
 
     // Now for the analog inputs
