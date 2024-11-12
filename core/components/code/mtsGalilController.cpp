@@ -23,7 +23,7 @@ http://www.cisst.org/cisst/license.txt.
 
 #include <sawGalilController/mtsGalilController.h>
 
-enum GALIL_STATES { ST_IDLE = 0, ST_HOMING_START, ST_HOMING_FI, ST_HOMING_END };
+enum GALIL_STATES { ST_IDLE = 0, ST_HOMING_START, ST_HOMING_FI, ST_HOMING_WAIT, ST_HOMING_END };
 
 //****** Axis Data structures in DR packet ******
 
@@ -442,6 +442,18 @@ void mtsGalilController::Configure(const std::string& fileName)
             mRobots[i].mEncoderAbsolute[axis] = axisData.is_absolute;
             mRobots[i].mActuatorState.IsHomed()[axis] = axisData.is_absolute;
             mRobots[i].mHomePos[axis] = axisData.home_pos;
+            if (axisData.home_vel == 0.0) {
+                // Set default value of homing speed.
+                // If homing at positive limit, should be negative for older controllers
+                // (newer controllers use HV, which takes a positive value)
+                if (axisData.home_pos >= axisData.position_limits.upper)
+                    mRobots[i].mHomingSpeed[axis] = -500;
+                else
+                    mRobots[i].mHomingSpeed[axis] = 500;
+            }
+            else {
+                mRobots[i].mHomingSpeed[axis] = static_cast<int>(std::round(axisData.home_vel*axisData.position_bits_to_SI.scale));
+            }
             mRobots[i].mHomeLimitDisable[axis] = 0;
             if (axisData.home_pos <= axisData.position_limits.lower)
                 mRobots[i].mHomeLimitDisable[axis] |= 2;   // Disable lower limit switch
@@ -1372,27 +1384,11 @@ void mtsGalilController::RobotData::Home(const vctBoolVec &mask)
             return;
         }
     }
-
     try {
-        // TODO: Set homing speed (in SI units) via JSON file
         if (mParent->HasHomingVelocity()) {
             // Newer controllers support the HV command
-            mHomingSpeed.SetAll(500);
             if (!galil_cmd_common("SetHomingSpeed", "HV ", mHomingSpeed))
                 mInterface->SendWarning(name + ": unable to set HV");
-        }
-        else {
-            // For older controllers, must set JG just before calling FI,
-            // when doing a custom homing sequence (mHomeCustom).
-            // Home switch 1 means that robot homes in negative direction,
-            // so we set mHomingSpeed positive.
-            // NOTE: this assumes that robot is not at home position.
-            for (size_t axis = 0; axis < mNumAxes; axis++) {
-                if (mSwitches[axis] & SwitchHome)
-                    mHomingSpeed[axis] = 500;
-                else
-                    mHomingSpeed[axis] = -500;
-            }
         }
         if (mHomeCustom) {
             // If this controller does not support LD (limit disable) and any axis
@@ -1569,7 +1565,7 @@ void mtsGalilController::RobotData::RunStateMachine()
                     // Start the motion
                     sprintf(mBuffer, "BG %c", galilChan);
                     mParent->SendCommand(mBuffer);
-                    mState[axis] = ST_HOMING_END;
+                    mState[axis] = ST_HOMING_WAIT;
                 }
                 catch (const std::runtime_error &e) {
                     mInterface->SendError(name + ": " + e.what());
@@ -1577,6 +1573,16 @@ void mtsGalilController::RobotData::RunStateMachine()
                     SetSpeed(mSpeed);
                     mState[axis] = ST_IDLE;
                 }
+            }
+            break;
+
+        case ST_HOMING_WAIT:
+            // Wait for axis to start moving or stop code to be cleared (SC_Running)
+            if ((mAxisStatus[axis] & StatusMotorMoving) || (mStopCode[axis] == SC_Running)) {
+                sprintf(buf, ": starting Find Index on axis %d (SC %d)",
+                        static_cast<int>(axis), mStopCode[axis]);
+                mInterface->SendStatus(name + buf);
+                mState[axis] = ST_HOMING_END;
             }
             break;
 
@@ -1618,7 +1624,8 @@ void mtsGalilController::RobotData::RunStateMachine()
                     if (!galil_cmd_common("home (LD-restore)", "LD ", mLimitDisable))
                         mInterface->SendError("Home: failed to restore limits");
                 }
-                mInterface->SendStatus(name + ": finished homing all axes");
+                if (mNumAxes > 1)
+                    mInterface->SendStatus(name + ": finished homing all axes");
             }
         }
     }

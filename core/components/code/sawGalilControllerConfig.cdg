@@ -137,6 +137,12 @@ class {
         visibility public;
     }
     member {
+        name home_vel;
+        type double;
+        default 0.0;
+        visibility public;
+    }
+    member {
         name position_limits;
         type sawGalilControllerConfig::limits;
         default sawGalilControllerConfig::limits();

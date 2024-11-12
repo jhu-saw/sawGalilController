@@ -28,6 +28,7 @@ The JSON file contains the following fields:
 |  --- offset   | 0         |  --- offset (in bits)                                 |
 |  -- is_absolute | false   |  -- true if absolute encoder (false if incremental)   |
 |  -- home_pos  | 0         |  -- home position                                     |
+|  -- home_vel  | 0         |  -- home velocity (**)                                |
 |  -- position_limits |     |  -- upper and lower joint position limits             |
 |  --- lower    | -MAX      |  --- lower position limit                             |
 |  --- upper    | +MAX      |  --- upper position limit                             |
@@ -43,5 +44,7 @@ The JSON file contains the following fields:
 (*) The conversion (position_bits_to_SI or volts_to_SI) is applied as follows:
 
 value_SI = (value_bits - offset)/scale
+
+(**) home_vel of 0 means to use a default of 500 bits; for older controllers, this is a signed value and is used to set JG; for newer controllers it is positive and used to set HV
 
 <> indicates that the default is an empty vector
