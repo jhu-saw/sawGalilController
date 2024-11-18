@@ -227,9 +227,9 @@ protected:
     std::vector<RobotData> mRobots;
 
     struct AnalogInputData {
-        mtsDoubleVec  values;
-        mtsDoubleVec  bits2volts;              // Conversion from bits to volts (depends on AQ setting)
-        mtsBoolVec    isSigned;                // True if Galil provides signed value (depends on AQ setting)
+        vctDoubleVec  values;
+        vctDoubleVec  bits2volts;              // Conversion from bits to volts (depends on AQ setting)
+        vctBoolVec    isSigned;                // True if Galil provides signed value (depends on AQ setting)
         vctUIntVec    AxisToGalilIndexMap;     // Map from axis number to Galil index
         vctUIntVec    GalilIndexToAxisMap;     // Map from Galil index to axis number
         mtsInterfaceProvided *mInterface;      // Provided interface

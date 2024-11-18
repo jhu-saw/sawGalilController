@@ -33,7 +33,7 @@ class GalilClient : public mtsTaskMain {
 private:
     size_t NumAxes;
 
-    mtsDoubleVec values;
+    vctDoubleVec values;
     mtsFunctionRead GetConnected;
     mtsFunctionRead get_analog;
 
