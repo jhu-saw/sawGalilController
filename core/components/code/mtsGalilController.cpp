@@ -722,6 +722,7 @@ void mtsGalilController::Run()
                 bool isAnyMoving = false;
                 bool isAllMotorOn = true;
                 bool isAllMotorOff = true;
+                mRobots[i].m_measured_js.SetValid(true);
                 for (axis = 0; axis < mRobots[i].mNumAxes; axis++) {
                     unsigned int galilAxis = mRobots[i].mAxisToGalilIndexMap[axis];
                     AxisDataMin *axisPtr = reinterpret_cast<AxisDataMin *>(gRec.byte_array +
@@ -863,6 +864,7 @@ void mtsGalilController::Run()
             char buf[128];
             sprintf(buf, ": GRecord error %d", ret);
             for (i = 0; i < mRobots.size(); i++ ) {
+                mRobots[i].m_measured_js.SetValid(false);
                 mRobots[i].SetFault();
                 mRobots[i].mInterface->SendError(mRobots[i].name + buf);
             }
