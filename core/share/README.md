@@ -32,6 +32,9 @@ The JSON file contains the following fields:
 |  -- position_limits |     |  -- upper and lower joint position limits             |
 |  --- lower    | -MAX      |  --- lower position limit                             |
 |  --- upper    | +MAX      |  --- upper position limit                             |
+|  -- brake     |           |  -- brake config                                      |
+|  --- output   | -1        |  --- output bit for brake                             |
+|  --- release  | -1        |  --- value to use to release brake (0 or 1)           |
 |               |           |                                                       |
 | analog_inputs | <>        | Array of analog input configuration data (see below)  |
 |  - name       |           |  - descriptive name (used for provided interface)     |

@@ -357,6 +357,7 @@ void mtsGalilController::Configure(const std::string& fileName)
     // Process the robot configuration data
     mRobots.resize(m_configuration.robots.size());
     for (i = 0; i < m_configuration.robots.size(); i++) {
+        mRobots[i].config = m_configuration.robots[i];
         mRobots[i].name = m_configuration.robots[i].name;
         mRobots[i].mParent = this;
         // Size of array determines number of axes
@@ -1058,6 +1059,18 @@ void mtsGalilController::RobotData::EnableMotorPower(void)
 {
     try {
         mParent->SendCommand(WriteCmdAxes(mBuffer, "SH ", mGalilAxes));
+        for (size_t i = 0; i < mNumAxes; i++) {
+            if (config.axes[i].brake.output >= 0) {
+                if (config.axes[i].brake.release == 1) {
+                    sprintf(mBuffer, "SB%d", config.axes[i].brake.output);
+                    mParent->SendCommand(mBuffer);
+                }
+                else if (config.axes[i].brake.release == 0) {
+                    sprintf(mBuffer, "CB%d", config.axes[i].brake.output);
+                    mParent->SendCommand(mBuffer);
+                }
+            }
+        }
         mTimeout = 20;
     }
     catch (const std::runtime_error &e) {
@@ -1079,6 +1092,18 @@ void mtsGalilController::RobotData::DisableMotorPower(void)
         mInterface->SendError(name + ": DisableMotorPower (ST) " + e.what());
     }
     try {
+        for (size_t i = 0; i < mNumAxes; i++) {
+            if (config.axes[i].brake.output >= 0) {
+                if (config.axes[i].brake.release == 1) {
+                    sprintf(mBuffer, "CB%d", config.axes[i].brake.output);
+                    mParent->SendCommand(mBuffer);
+                }
+                else if (config.axes[i].brake.release == 0) {
+                    sprintf(mBuffer, "SB%d", config.axes[i].brake.output);
+                    mParent->SendCommand(mBuffer);
+                }
+            }
+        }
         mParent->SendCommand(WriteCmdAxes(mBuffer, "MO ", mGalilAxes));
         mTimeout = 20;
     }

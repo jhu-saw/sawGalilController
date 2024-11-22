@@ -98,6 +98,7 @@ protected:
 
     // Structure for robot data
     struct RobotData {
+        sawGalilControllerConfig::robots config;  // Axis config
         std::string   name;                     // Robot name (from config file)
         unsigned int  mNumAxes;                 // Number of axes
         unsigned int  mGalilIndexMax;           // Maximum galil index

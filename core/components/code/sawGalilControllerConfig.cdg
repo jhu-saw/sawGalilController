@@ -100,6 +100,24 @@ class {
 }
 
 class {
+    name brake;
+    namespace sawGalilControllerConfig;
+    attribute CISST_EXPORT;
+    member {
+        name output;
+        type int;
+        default -1;
+        visibility public;
+    }
+    member {
+        name release;
+        type int;
+        default -1;
+        visibility public;
+    }
+}
+
+class {
     name robot_axis;
     namespace sawGalilControllerConfig;
     attribute CISST_EXPORT;
@@ -146,6 +164,12 @@ class {
         name position_limits;
         type sawGalilControllerConfig::limits;
         default sawGalilControllerConfig::limits();
+        visibility public;
+    }
+    member {
+        name brake;
+        type sawGalilControllerConfig::brake;
+        default sawGalilControllerConfig::brake();
         visibility public;
     }
 }
