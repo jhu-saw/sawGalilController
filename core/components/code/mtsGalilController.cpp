@@ -20,6 +20,7 @@ http://www.cisst.org/cisst/license.txt.
 
 #include <cisstCommon/cmnPath.h>
 #include <cisstCommon/cmnAssert.h>
+#include <cisstOSAbstraction/osaSleep.h>
 
 #include <sawGalilController/mtsGalilController.h>
 
@@ -1007,7 +1008,13 @@ void mtsGalilController::SendCommand(const std::string &cmdString)
         GReturn ret = GCmd(mGalil, cmdString.c_str());
         if (ret != G_NO_ERROR) {
             char buf[64];
-            sprintf(buf, "SendCommand: error %d sending ", ret);
+            if (ret == G_BAD_RESPONSE_QUESTION_MARK) {
+                int tc_value = QueryValueInt("MG _TC");
+                sprintf(buf, "SendCommand: error %d (TC %d) sending ", ret, tc_value);
+            }
+            else {
+                sprintf(buf, "SendCommand: error %d sending ", ret);
+            }
             throw std::runtime_error(std::string(buf)+cmdString);
         }
     }
@@ -1025,7 +1032,13 @@ void mtsGalilController::SendCommandRet(const std::string &cmdString, std::strin
         else {
             retString.clear();
             char buf[64];
-            sprintf(buf, "SendCommandRet: error %d sending ", ret);
+            if (ret == G_BAD_RESPONSE_QUESTION_MARK) {
+                int tc_value = QueryValueInt("MG _TC");
+                sprintf(buf, "SendCommandRet: error %d (TC %d) sending ", ret, tc_value);
+            }
+            else {
+                sprintf(buf, "SendCommandRet: error %d sending ", ret);
+            }
             throw std::runtime_error(std::string(buf)+cmdString);
         }
     }
@@ -1206,10 +1219,10 @@ void mtsGalilController::RobotData::servo_jv(const prmVelocityJointSet &jtvel)
         return;
 
     try {
-        // TODO: Only need to send BG after the first JG command
         // Note that JG actually updates SP on the Galil, but for now we do not update
         // mSpeed -- that allows us to restore the previous speed when we stop.
-        if (galil_cmd_common("servo_jv", "JG ", jtvel.Goal(), false))
+        // Only need to send BG command if motors not already moving.
+        if (galil_cmd_common("servo_jv", "JG ", jtvel.Goal(), false) && !mMotionActive)
             mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", mGalilAxes));
     }
     catch (const std::runtime_error &e) {
@@ -1320,6 +1333,7 @@ void mtsGalilController::RobotData::stop_if_active(const char *cmd)
     if (mMotionActive) {
         try {
             mParent->SendCommand(WriteCmdAxes(mBuffer, "ST ", mGalilAxes));
+            osaSleep(0.1);   // 0.1 seems to work, 0.05 does not
         }
         catch (const std::runtime_error &e) {
             mInterface->SendError(name + ": " + cmd + " (ST) " + e.what());
