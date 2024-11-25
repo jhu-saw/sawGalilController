@@ -217,6 +217,7 @@ void mtsGalilController::SetupInterfaces(void)
             prov->AddCommandWrite(&mtsGalilController::RobotData::servo_jp, &mRobots[i], "servo_jp");
             prov->AddCommandWrite(&mtsGalilController::RobotData::servo_jr, &mRobots[i], "servo_jr");
             prov->AddCommandWrite(&mtsGalilController::RobotData::servo_jv, &mRobots[i], "servo_jv");
+            prov->AddCommandWrite(&mtsGalilController::RobotData::move_jp,  &mRobots[i], "move_jp");
             prov->AddCommandVoid(&mtsGalilController::RobotData::hold, &mRobots[i], "hold");
             prov->AddCommandRead(&mtsGalilController::RobotData::GetConfig_js, &mRobots[i], "configuration_js");
             prov->AddCommandWrite(&mtsGalilController::RobotData::state_command, &mRobots[i], "state_command", std::string(""));
@@ -667,6 +668,10 @@ void mtsGalilController::Startup()
         mRobots[i].SetSpeed(mRobots[i].mSpeedDefault);
         mRobots[i].SetAccel(mRobots[i].mAccelDefault);
         mRobots[i].SetDecel(mRobots[i].mDecelDefault);
+        // Make sure position tracking (PT) mode is off. We do this by setting the shadow
+        // variable PTmode to true before requesting the change to false.
+        mRobots[i].PTmode = true;
+        mRobots[i].SetPT(false);
 
         // Store the current setting of limit disable (LD) in mLimitDisable
         mRobots[i].mLimitDisable.SetAll(0);
@@ -1096,9 +1101,8 @@ void mtsGalilController::RobotData::DisableMotorPower(void)
 {
     try {
         if (mMotionActive) {
-            mParent->SendCommand(WriteCmdAxes(mBuffer, "ST ", mGalilAxes));
-            // TEMP: set speed in case previous command was servo_jv
-            SetSpeed(mSpeed);
+            hold();
+            osaSleep(0.1);   // 0.1 seems to work, 0.05 does not
         }
     }
     catch (const std::runtime_error &e) {
@@ -1183,18 +1187,42 @@ bool mtsGalilController::RobotData::CheckStateEnabled(const char *cmdName) const
     return true;
 }
 
+void mtsGalilController::RobotData::SetPT(bool state)
+{
+    if (state != PTmode) {
+        int32_t galilData[GALIL_MAX_AXES];
+        for (unsigned int i = 0; i < mGalilIndexMax; i++)
+            galilData[i] = state ? 1 : 0;
+        mParent->SendCommand(WriteCmdValues(mBuffer, "PT ", galilData, mGalilIndexValid, mGalilIndexMax));
+        PTmode = state;
+    }
+}
 void mtsGalilController::RobotData::servo_jp(const prmPositionJointSet &jtpos)
 {
     if (!CheckStateEnabled("servo_jp"))
         return;
 
-    stop_if_active("servo_jp");
     try {
-        if (galil_cmd_common("servo_jp", "PA ", jtpos.Goal(), true))
-            mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", mGalilAxes));
+        SetPT(true);
+        galil_cmd_common("servo_jp", "PA ", jtpos.Goal(), true);
     }
     catch (const std::runtime_error &e) {
         mInterface->SendError(name + ": servo_jp " + e.what());
+    }
+}
+
+void mtsGalilController::RobotData::move_jp(const prmPositionJointSet &jtpos)
+{
+    if (!CheckStateEnabled("move_jp"))
+        return;
+
+    stop_if_active("move_jp");  // also ensures PTmode is false
+    try {
+        if (galil_cmd_common("move_jp", "PA ", jtpos.Goal(), true))
+            mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", mGalilAxes));
+    }
+    catch (const std::runtime_error &e) {
+        mInterface->SendError(name + ": move_jp " + e.what());
     }
 }
 
@@ -1203,7 +1231,9 @@ void mtsGalilController::RobotData::servo_jr(const prmPositionJointSet &jtpos)
     if (!CheckStateEnabled("servo_jr"))
         return;
 
-    stop_if_active("servo_jr");
+    // Note that IP (incremental position) command could be used (and BG would not
+    // be needed), but only if position increment is in direction of motion.
+    stop_if_active("servo_jr");  // also ensures PTmode is false
     try {
         if (galil_cmd_common("servo_jr", "PR ", jtpos.Goal(), false))
             mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", mGalilAxes));
@@ -1219,6 +1249,8 @@ void mtsGalilController::RobotData::servo_jv(const prmVelocityJointSet &jtvel)
         return;
 
     try {
+        // Make sure we are not in position-tracking mode
+        SetPT(false);
         // Note that JG actually updates SP on the Galil, but for now we do not update
         // mSpeed -- that allows us to restore the previous speed when we stop.
         // Only need to send BG command if motors not already moving.
@@ -1237,6 +1269,8 @@ void mtsGalilController::RobotData::hold(void)
 
     try {
         mParent->SendCommand(WriteCmdAxes(mBuffer, "ST ", mGalilAxes));
+        // ST turns off position tracking mode
+        PTmode = false;
         // TEMP: set speed in case previous command was servo_jv
         SetSpeed(mSpeed);
     }
@@ -1331,13 +1365,15 @@ bool mtsGalilController::RobotData::galil_cmd_common(const char *cmdName, const 
 void mtsGalilController::RobotData::stop_if_active(const char *cmd)
 {
     if (mMotionActive) {
-        try {
-            mParent->SendCommand(WriteCmdAxes(mBuffer, "ST ", mGalilAxes));
-            osaSleep(0.1);   // 0.1 seems to work, 0.05 does not
-        }
-        catch (const std::runtime_error &e) {
-            mInterface->SendError(name + ": " + cmd + " (ST) " + e.what());
-        }
+        hold();
+        osaSleep(0.1);   // 0.1 seems to work, 0.05 does not
+    }
+    // Make sure PT mode is off
+    try {
+        SetPT(false);
+    }
+    catch (const std::runtime_error &e) {
+        mInterface->SendError(name + ": " + cmd + " (PT) " + e.what());
     }
 }
 
@@ -1409,12 +1445,7 @@ void mtsGalilController::RobotData::Home(const vctBoolVec &mask)
     UnHome(mHomingMask);
 
     if (mMotionActive) {
-        try {
-            mParent->SendCommand(WriteCmdAxes(mBuffer, "ST ", galilAxes));
-        }
-        catch (const std::runtime_error &e) {
-            mInterface->SendError(name + ": Home (ST) " + e.what());
-        }
+        hold();
     }
 
     // Check whether limit needs to be disabled
@@ -1426,6 +1457,7 @@ void mtsGalilController::RobotData::Home(const vctBoolVec &mask)
         }
     }
     try {
+        SetPT(false);   // make sure position tracking is off
         if (mParent->HasHomingVelocity()) {
             // Newer controllers support the HV command
             if (!galil_cmd_common("SetHomingSpeed", "HV ", mHomingSpeed))
@@ -1487,14 +1519,10 @@ void mtsGalilController::RobotData::FindEdge(const vctBoolVec &mask)
     const char *galilAxes = GetGalilAxes(galilIndexValid);
 
     if (mMotionActive) {
-        try {
-            mParent->SendCommand(WriteCmdAxes(mBuffer, "ST ", galilAxes));
-        }
-        catch (const std::runtime_error &e) {
-            mInterface->SendError(name + ": FindEdge (ST) " + e.what());
-        }
+        hold();
     }
     try {
+        SetPT(false);   // make sure position tracking is off
         mParent->SendCommand(WriteCmdAxes(mBuffer, "FE ", galilAxes));
         mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", galilAxes));
     }
@@ -1516,14 +1544,10 @@ void mtsGalilController::RobotData::FindIndex(const vctBoolVec &mask)
     const char *galilAxes = GetGalilAxes(galilIndexValid);
 
     if (mMotionActive) {
-        try {
-            mParent->SendCommand(WriteCmdAxes(mBuffer, "ST ", galilAxes));
-        }
-        catch (const std::runtime_error &e) {
-            mInterface->SendError(name + ": FindIndex (ST) " + e.what());
-        }
+        hold();
     }
     try {
+        SetPT(false);   // make sure position tracking is off
         mParent->SendCommand(WriteCmdAxes(mBuffer, "FI ", galilAxes));
         mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", galilAxes));
     }

@@ -146,6 +146,8 @@ protected:
         // Boolean array indicating which Galil indexes are valid
         bool mGalilIndexValid[GALIL_MAX_AXES];
 
+        bool PTmode;                            // Shadow variable for position tracking (PT)
+
         mtsGalilController *mParent;            // Pointer to parent object
         char *mBuffer;                          // Local buffer for building command strings
 
@@ -155,7 +157,10 @@ protected:
         void GetNumAxes(unsigned int &numAxes) const { numAxes = mNumAxes; }
 
         // Move joint to specified position
+        //  servo_jp:  uses Position Tracking mode (PT)
+        //  move_jp:  uses Independent Axis Positioning mode (PA, BG)
         void servo_jp(const prmPositionJointSet &jtpos);
+        void move_jp(const prmPositionJointSet &jtpos);
         // Move joint to specified relative position
         void servo_jr(const prmPositionJointSet &jtpos);
         // Move joint at specified velocity
@@ -206,8 +211,12 @@ protected:
         // Local method to check if robot is in ENABLED state
         bool CheckStateEnabled(const char *cmdName) const;
 
-        // Local method to stop robot if it is moving
+        // Local method to stop robot if it is moving; also ensures that PTmode is false
         void stop_if_active(const char *cmd);
+
+        // Local method to set PT mode. Note that this method checks the value of the shadow
+        // variable PTmode and only changes it if it is different than the requested state.
+        void SetPT(bool state);
 
         // Local method to create boolean array from vctBoolVec, also remapping from robot axis to Galil index
         const bool *GetGalilIndexValid(const vctBoolVec &mask) const;
