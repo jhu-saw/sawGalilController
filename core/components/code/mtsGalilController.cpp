@@ -437,7 +437,7 @@ void mtsGalilController::Configure(const std::string& fileName)
             mRobots[i].m_measured_js.Name()[axis].assign(axisData.name);
             mRobots[i].m_setpoint_js.Name()[axis].assign(axisData.name);
             mRobots[i].m_config_j.Name()[axis].assign(axisData.name);
-            mRobots[i].m_config_j.Type()[axis] = static_cast<cmnJointType>(axisData.type);
+            mRobots[i].m_config_j.Type()[axis] = axisData.type;
             mRobots[i].m_config_j.PositionMin()[axis] = axisData.position_limits.lower;
             mRobots[i].m_config_j.PositionMax()[axis] = axisData.position_limits.upper;
             mRobots[i].mEncoderCountsPerUnit[axis] = axisData.position_bits_to_SI.scale;
@@ -462,6 +462,23 @@ void mtsGalilController::Configure(const std::string& fileName)
                 mRobots[i].mHomeLimitDisable[axis] |= 2;   // Disable lower limit switch
             else if (axisData.home_pos >= axisData.position_limits.upper)
                 mRobots[i].mHomeLimitDisable[axis] |= 1;   // Disable upper limit switch
+
+            // Default values should be read from JSON file
+            if (axisData.type == CMN_JOINT_PRISMATIC) {
+                mRobots[i].mSpeedDefault[axis] = 0.01;   //  10 mm/s
+                mRobots[i].mAccelDefault[axis] = 0.10;   // 100 mm/s^2
+                mRobots[i].mDecelDefault[axis] = 0.10;   // 100 mm/s^2
+            }
+            else if (axisData.type == CMN_JOINT_REVOLUTE) {
+                mRobots[i].mSpeedDefault[axis] = 10.0*cmnPI_180;   //  10 deg/s
+                mRobots[i].mAccelDefault[axis] = 100.0*cmnPI_180;  // 100 deg/s^2
+                mRobots[i].mDecelDefault[axis] = 100.0*cmnPI_180;  // 100 deg/s^2
+            }
+            else {
+                CMN_LOG_CLASS_INIT_ERROR << axisData.name << ": invalid axis[" << i << "] type: "
+                                         << axisData.type << std::endl;
+                exit(EXIT_FAILURE);
+            }
         }
         mRobots[i].mGalilIndexMax++;   // Increment so that we can test for less than
 
@@ -479,11 +496,6 @@ void mtsGalilController::Configure(const std::string& fileName)
         mRobots[i].mGalilQuery[q-1] = 0;        // NULL termination (and remove last comma)
 
         mRobots[i].m_op_state.SetIsHomed(mRobots[i].mActuatorState.IsHomed().All());
-
-        // Default values should be read from JSON file
-        mRobots[i].mSpeedDefault.SetAll(0.01);   //  10 mm/s
-        mRobots[i].mAccelDefault.SetAll(0.10);   // 100 mm/s^2
-        mRobots[i].mDecelDefault.SetAll(0.10);   // 100 mm/s^2
     }
 
     // Now for the analog inputs
