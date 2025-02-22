@@ -4,7 +4,7 @@
 /*
   Author(s): Peter Kazanzides, Dimitri Lezcano, Anton Deguet
 
-  (C) Copyright 2024 Johns Hopkins University (JHU), All Rights Reserved.
+  (C) Copyright 2024-2025 Johns Hopkins University (JHU), All Rights Reserved.
 
   This component provides an interface to a Galil DMC controller, using the DR
   (DataRecord) approach, where the Galil controller periodically sends a data
@@ -138,6 +138,7 @@ protected:
         unsigned int  mTimeout;                 // Timeout
         mtsInterfaceProvided *mInterface;       // Provided interface
         mtsFunctionWrite operating_state;       // Event generator
+        bool          mHadError;                // Indicates that an error occurred last iteration
 
         // String of configured axes (e.g., "ABC")
         char mGalilAxes[GALIL_MAX_AXES+1];

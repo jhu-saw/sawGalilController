@@ -4,7 +4,7 @@
 /*
   Author(s): Peter Kazanzides, Dimitri Lezcano, Anton Deguet
 
-  (C) Copyright 2024 Johns Hopkins University (JHU), All Rights Reserved.
+  (C) Copyright 2024-2025 Johns Hopkins University (JHU), All Rights Reserved.
 
 --- begin cisst license - do not edit ---
 
@@ -734,6 +734,18 @@ void mtsGalilController::Run()
 
             // Loop through configured robots
             for (i = 0; i < mRobots.size(); i++ ) {
+                if (mRobots[i].mHadError) {
+                    if (mErrorCode == 0) {
+                        mRobots[i].mInterface->SendStatus(mRobots[i].name + ": no error code reported");
+                    }
+                    else {
+                        char buf[32];
+                        sprintf(buf, ": error code %d", static_cast<int>(mErrorCode));
+                        mRobots[i].mInterface->SendError(mRobots[i].name + buf);
+                    }
+                    mRobots[i].mHadError = false;
+                    // TODO: Check whether need to call TC to clear error
+                }
                 // Get the axis data
                 // Note that all controllers support AxisDataMin, so we first get most of the data from that
                 // subset of the structure. Later, we cast to AxisDataOld or AxisDataNew, depending on the model
@@ -1074,7 +1086,7 @@ void mtsGalilController::AbortMotion()
 }
 
 mtsGalilController::RobotData::RobotData()
-    : mMotorPowerOn(false), mMotionActive(false), mTimeout(0), mParent(0)
+    : mMotorPowerOn(false), mMotionActive(false), mTimeout(0), mHadError(false), mParent(0)
 {
     mBuffer = new char[G_SMALL_BUFFER];
 }
@@ -1104,6 +1116,7 @@ void mtsGalilController::RobotData::EnableMotorPower(void)
         mTimeout = 20;
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": EnableMotorPower " + e.what());
     }
 }
@@ -1118,6 +1131,7 @@ void mtsGalilController::RobotData::DisableMotorPower(void)
         }
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": DisableMotorPower (ST) " + e.what());
     }
     try {
@@ -1137,6 +1151,7 @@ void mtsGalilController::RobotData::DisableMotorPower(void)
         mTimeout = 20;
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": DisableMotorPower " + e.what());
     }
 }
@@ -1219,6 +1234,7 @@ void mtsGalilController::RobotData::servo_jp(const prmPositionJointSet &jtpos)
         galil_cmd_common("servo_jp", "PA ", jtpos.Goal(), true);
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": servo_jp " + e.what());
     }
 }
@@ -1234,6 +1250,7 @@ void mtsGalilController::RobotData::move_jp(const prmPositionJointSet &jtpos)
             mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", mGalilAxes));
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": move_jp " + e.what());
     }
 }
@@ -1251,6 +1268,7 @@ void mtsGalilController::RobotData::servo_jr(const prmPositionJointSet &jtpos)
             mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", mGalilAxes));
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": servo_jr " + e.what());
     }
 }
@@ -1270,6 +1288,7 @@ void mtsGalilController::RobotData::servo_jv(const prmVelocityJointSet &jtvel)
             mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", mGalilAxes));
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": servo_jv " + e.what());
     }
 }
@@ -1287,6 +1306,7 @@ void mtsGalilController::RobotData::hold(void)
         SetSpeed(mSpeed);
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": hold " + e.what());
     }
 }
@@ -1338,6 +1358,7 @@ bool mtsGalilController::RobotData::galil_cmd_common(const char *cmdName, const 
         ret = true;
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": " + cmdName + " " + e.what());
     }
     return ret;
@@ -1369,6 +1390,7 @@ bool mtsGalilController::RobotData::galil_cmd_common(const char *cmdName, const 
         ret = true;
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": " + cmdName + " " + e.what());
     }
     return ret;
@@ -1385,6 +1407,7 @@ void mtsGalilController::RobotData::stop_if_active(const char *cmd)
         SetPT(false);
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": " + cmd + " (PT) " + e.what());
     }
 }
@@ -1494,6 +1517,7 @@ void mtsGalilController::RobotData::Home(const vctBoolVec &mask)
         }
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": Home " + e.what());
     }
 }
@@ -1512,6 +1536,7 @@ void mtsGalilController::RobotData::UnHome(const vctBoolVec &mask)
             mParent->SendCommand(WriteCmdValues(mBuffer, "ZA ", galilData, galilIndexValid, mGalilIndexMax));
         }
         catch (const std::runtime_error &e) {
+            mHadError = true;
             mInterface->SendError(name + ": UnHome " + e.what());
         }
     }
@@ -1539,6 +1564,7 @@ void mtsGalilController::RobotData::FindEdge(const vctBoolVec &mask)
         mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", galilAxes));
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": FindEdge " + e.what());
     }
 }
@@ -1564,6 +1590,7 @@ void mtsGalilController::RobotData::FindIndex(const vctBoolVec &mask)
         mParent->SendCommand(WriteCmdAxes(mBuffer, "BG ", galilAxes));
     }
     catch (const std::runtime_error &e) {
+        mHadError = true;
         mInterface->SendError(name + ": FindIndex " + e.what());
     }
 }
@@ -1645,6 +1672,7 @@ void mtsGalilController::RobotData::RunStateMachine()
                     mState[axis] = ST_HOMING_WAIT;
                 }
                 catch (const std::runtime_error &e) {
+                    mHadError = true;
                     mInterface->SendError(name + ": " + e.what());
                     // Restore original speed
                     SetSpeed(mSpeed);
@@ -1680,6 +1708,7 @@ void mtsGalilController::RobotData::RunStateMachine()
                     mActuatorState.IsHomed()[axis] = true;
                 }
                 catch (const std::runtime_error &e) {
+                    mHadError = true;
                     mInterface->SendError(name + ": " + e.what());
                 }
                 // Restore original speed
