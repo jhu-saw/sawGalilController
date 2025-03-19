@@ -6,8 +6,8 @@ import os, sys, ctypes
 try:
    flags = sys.getdlopenflags()
    sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
-except AttributeError, e:
-    print 'Skipping dlopen flags, ', e
+except AttributeError as e:
+    print('Skipping dlopen flags, ' + str(e))
 
 import cisstCommonPython as cisstCommon
 
@@ -25,33 +25,33 @@ import cisstParameterTypesPython as cisstParameterTypes
 import numpy
 
 LCM = cisstMultiTask.mtsManagerLocal.GetInstance()
-print 'Creating Galil client'
+print('Creating Galil client')
 GalilClient = cisstMultiTask.mtsComponentWithManagement('GalilClient')
 LCM.AddComponent(GalilClient)
 LCM.CreateAll()
 LCM.StartAll()
 
 Manager = GalilClient.GetManagerComponentServices()
-print 'Loading sawGalilController'
+print('Loading sawGalilController')
 if not Manager.Load('sawGalilController'):
-    print 'Failed to load sawGalilController (see cisstLog.txt)'
+    print('Failed to load sawGalilController (see cisstLog.txt)')
 
-print 'Creating Galil server (mtsGalilController)'
+print('Creating Galil server (mtsGalilController)')
 arg = cisstMultiTask.mtsTaskContinuousConstructorArg('GalilServer', 256, True)
 GalilServer = LCM.CreateComponentDynamically('mtsGalilController', arg)
 if GalilServer:
-   print 'Component created'
+   print('Component created')
    LCM.AddComponent(GalilServer)
-   print 'Configuring Galil server.'
+   print('Configuring Galil server.')
    configFile = raw_input('Enter config filename (JSON): ')
    GalilServer.Configure(configFile)
    GalilServer.Create()
 
-   print 'Connecting Galil client to Galil server'
+   print('Connecting Galil client to Galil server')
    # robot is the required interface
    robot = GalilClient.AddInterfaceRequiredAndConnect(('GalilServer', 'control'))
 
-   print 'Starting Galil server'
+   print('Starting Galil server')
    GalilServer.Start()
 
-   print 'System ready. Type dir(robot) to see available commands.'
+   print('System ready. Type dir(robot) to see available commands.')
