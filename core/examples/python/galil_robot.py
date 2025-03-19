@@ -37,7 +37,8 @@ if not Manager.Load('sawGalilController'):
     print 'Failed to load sawGalilController (see cisstLog.txt)'
 
 print 'Creating Galil server (mtsGalilController)'
-GalilServer = LCM.CreateComponentDynamically('mtsGalilController', 'GalilServer', '')
+arg = cisstMultiTask.mtsTaskContinuousConstructorArg('GalilServer', 256, True)
+GalilServer = LCM.CreateComponentDynamically('mtsGalilController', arg)
 if GalilServer:
    print 'Component created'
    LCM.AddComponent(GalilServer)
