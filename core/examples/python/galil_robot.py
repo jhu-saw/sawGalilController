@@ -4,8 +4,8 @@ import os, sys, ctypes
 
 # Set RTLD_GLOBAL flag for dynamic loading (on Linux)
 try:
-   flags = sys.getdlopenflags()
-   sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
+    flags = sys.getdlopenflags()
+    sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 except AttributeError as e:
     print('Skipping dlopen flags, ' + str(e))
 
@@ -18,40 +18,33 @@ cisstCommon.cmnLogger.SetMaskDefaultLog(cisstCommon.CMN_LOG_ALLOW_VERBOSE)
 cisstCommon.cmnLogger.AddChannelToStdOut(cisstCommon.CMN_LOG_ALLOW_ERRORS_AND_WARNINGS)
 
 def log():
-   os.system('tail cisstLog.txt')
+    os.system('tail cisstLog.txt')
 
 import cisstMultiTaskPython as cisstMultiTask
 import cisstParameterTypesPython as cisstParameterTypes
 import numpy
 
 LCM = cisstMultiTask.mtsManagerLocal.GetInstance()
-print('Creating Galil client')
-GalilClient = cisstMultiTask.mtsComponentWithManagement('GalilClient')
-LCM.AddComponent(GalilClient)
 LCM.CreateAll()
 LCM.StartAll()
 
-Manager = GalilClient.GetManagerComponentServices()
-print('Loading sawGalilController')
-if not Manager.Load('sawGalilController'):
-    print('Failed to load sawGalilController (see cisstLog.txt)')
-
-print('Creating Galil server (mtsGalilController)')
 arg = cisstMultiTask.mtsTaskContinuousConstructorArg('GalilServer', 256, True)
-GalilServer = LCM.CreateComponentDynamically('mtsGalilController', arg)
+GalilServer = cisstMultiTask.mtsLoadAndCreateServer('sawGalilController',
+                                                    'mtsGalilController',
+                                                    'GalilServer', arg)
+
 if GalilServer:
-   print('Component created')
-   LCM.AddComponent(GalilServer)
-   print('Configuring Galil server.')
-   configFile = raw_input('Enter config filename (JSON): ')
-   GalilServer.Configure(configFile)
-   GalilServer.Create()
+    print('Configuring Galil server.')
+    # Python2 uses raw_input and Python3 uses input
+    try:
+        configFile = raw_input('Enter config filename (JSON): ')
+    except NameError:
+        configFile = input('Enter config filename (JSON): ')
+    GalilServer.Configure(configFile)
+    # robot is the required interface
+    robot = cisstMultiTask.mtsCreateClientInterface('GalilClient', 'GalilServer', 'control')
 
-   print('Connecting Galil client to Galil server')
-   # robot is the required interface
-   robot = GalilClient.AddInterfaceRequiredAndConnect(('GalilServer', 'control'))
+LCM.CreateAllAndWait(2.0)
+LCM.StartAllAndWait(2.0)
 
-   print('Starting Galil server')
-   GalilServer.Start()
-
-   print('System ready. Type dir(robot) to see available commands.')
+print('System ready. Type dir(robot) to see available commands.')
