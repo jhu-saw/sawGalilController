@@ -369,18 +369,18 @@ void mtsGalilController::Configure(const std::string& fileName)
         mRobots[i].mNumAxes = static_cast<unsigned int>(numAxes);
 
         // Now, set the data sizes
-        mRobots[i].m_config_j.Name().SetSize(numAxes);
+        mRobots[i].m_config_j.Name().resize(numAxes);
         mRobots[i].m_config_j.Type().SetSize(numAxes);
         mRobots[i].m_config_j.PositionMin().SetSize(numAxes);
         mRobots[i].m_config_j.PositionMax().SetSize(numAxes);
         // We have position and velocity for measured_js
-        mRobots[i].m_measured_js.Name().SetSize(numAxes);
+        mRobots[i].m_measured_js.Name().resize(numAxes);
         mRobots[i].m_measured_js.Position().SetSize(numAxes);
         mRobots[i].m_measured_js.Velocity().SetSize(numAxes);
         mRobots[i].m_measured_js.Position().SetAll(0.0);
         mRobots[i].m_measured_js.Velocity().SetAll(0.0);
         // We have position and effort for setpoint_js
-        mRobots[i].m_setpoint_js.Name().SetSize(numAxes);
+        mRobots[i].m_setpoint_js.Name().resize(numAxes);
         mRobots[i].m_setpoint_js.Position().SetSize(numAxes);
         mRobots[i].m_setpoint_js.Effort().SetSize(numAxes);
         mRobots[i].m_setpoint_js.Position().SetAll(0.);
