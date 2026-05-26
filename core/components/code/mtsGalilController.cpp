@@ -177,6 +177,7 @@ mtsGalilController::~mtsGalilController()
 
 void mtsGalilController::Init(void)
 {
+    SetInitializationDelay(6.0);
     // Call SetupInterfaces after Configure, for reasons documented below
     // (see comment at end of Configure method).
     mBuffer = new char[G_SMALL_BUFFER];
@@ -527,6 +528,12 @@ void mtsGalilController::Configure(const std::string& fileName)
 void mtsGalilController::Startup()
 {
 #ifndef SIMULATION
+    if (GVersion(mBuffer, G_SMALL_BUFFER) == G_NO_ERROR) {
+        CMN_LOG_CLASS_INIT_VERBOSE << "Galil driver versions: " << mBuffer << std::endl;
+    }
+    else {
+        CMN_LOG_CLASS_INIT_WARNING << "Failed to query GVersion" << std::endl;
+    }
     std::string GalilString = m_configuration.IP_address;
     if (m_configuration.direct_mode) {
         GalilString.append(" -d");
@@ -548,6 +555,7 @@ void mtsGalilController::Startup()
             if (GProgramDownloadFile(mGalil, fullPath.c_str(), 0) == G_NO_ERROR) {
                 try {
                     SendCommand("XQ");  // Execute downloaded program
+                    CMN_LOG_CLASS_INIT_VERBOSE << "Startup: download and execute complete" << std::endl;
                 }
                 catch (const std::runtime_error &) {
                     CMN_LOG_CLASS_INIT_ERROR << "Startup: error executing DMC program file "
@@ -674,6 +682,7 @@ void mtsGalilController::Startup()
         }
     }
 
+    CMN_LOG_CLASS_INIT_VERBOSE << "Startup: initializing " << mRobots.size() << " robots" << std::endl;
     // Loop through robots
     for (i = 0; i < mRobots.size(); i++ ) {
         // Set default speed, accel, decel
@@ -703,7 +712,10 @@ void mtsGalilController::Startup()
     }
 
     ret = GRecordRate(mGalil, m_configuration.DR_period_ms);
-    if (ret != G_NO_ERROR) {
+    if (ret == G_NO_ERROR) {
+        CMN_LOG_CLASS_INIT_VERBOSE << "Startup: set rate to " << m_configuration.DR_period_ms << std::endl;
+    }
+    else {
         CMN_LOG_CLASS_INIT_ERROR << "Galil GRecordRate: error " << ret << " setting rate to "
                                  << m_configuration.DR_period_ms << " ms" << std::endl;
         // Close connection so we do not hang waiting for data
