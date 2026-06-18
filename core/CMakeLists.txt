@@ -1,5 +1,5 @@
 #
-# (C) Copyright 2024 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2024-2026 Johns Hopkins University (JHU), All Rights Reserved.
 #
 # --- begin cisst license - do not edit ---
 #
@@ -13,8 +13,7 @@ cmake_minimum_required(VERSION 3.10)
 project (sawGalilControllerCore VERSION 0.0.1)
 
 # to locate cisst macros
-find_package (cisst REQUIRED cisstCommon)
-include (${CISST_USE_FILE})
+find_package (cisst REQUIRED)
 
 cisst_cpack_settings (
   VENDOR "JHU"

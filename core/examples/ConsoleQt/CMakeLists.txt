@@ -1,5 +1,5 @@
 #
-# (C) Copyright 2024 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2024-2026 Johns Hopkins University (JHU), All Rights Reserved.
 #
 # --- begin cisst license - do not edit ---
 #
@@ -25,45 +25,35 @@ set (REQUIRED_CISST_LIBRARIES
   cisstQt)
 
 # find cisst and make sure the required libraries have been compiled
-find_package (cisst 1.2 COMPONENTS ${REQUIRED_CISST_LIBRARIES})
+find_package (cisst 1.2 REQUIRED COMPONENTS ${REQUIRED_CISST_LIBRARIES})
 
-if (cisst_FOUND_AS_REQUIRED)
+# catkin/ROS paths
+cisst_set_output_path ()
 
-  # load cisst configuration
-  include (${CISST_USE_FILE})
+find_package (sawGalilController
+  HINTS ${CMAKE_BINARY_DIR})
 
-  # catkin/ROS paths
-  cisst_set_output_path ()
+if (sawGalilController_FOUND)
 
-  find_package (sawGalilController
-    HINTS ${CMAKE_BINARY_DIR})
+  include_directories (${sawGalilController_INCLUDE_DIR})
+  link_directories (${sawGalilController_LIBRARY_DIR})
 
-  if (sawGalilController_FOUND)
+  add_executable (sawGalilConsoleQt main.cpp)
 
-    include_directories (${sawGalilController_INCLUDE_DIR})
-    link_directories (${sawGalilController_LIBRARY_DIR})
+  target_link_libraries (sawGalilConsoleQt
+                         ${sawGalilController_LIBRARIES}
+                         ${cisst_LIBRARIES})
 
-    add_executable (sawGalilConsoleQt main.cpp)
+  set_target_properties (sawGalilConsoleQt PROPERTIES
+    COMPONENT sawGalilController-Examples
+    FOLDER "sawGalilController")
 
-    # link with the cisst libraries
-    cisst_target_link_libraries (sawGalilConsoleQt ${REQUIRED_CISST_LIBRARIES})
+  install (TARGETS sawGalilConsoleQt
+    COMPONENT sawGalilController-Examples
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
 
-    # link with sawGalilController library
-    target_link_libraries (sawGalilConsoleQt ${sawGalilController_LIBRARIES})
-
-    set_target_properties (sawGalilConsoleQt PROPERTIES
-      COMPONENT sawGalilController-Examples
-      FOLDER "sawGalilController")
-
-    install (TARGETS sawGalilConsoleQt
-      COMPONENT sawGalilController-Examples
-      RUNTIME DESTINATION bin
-      LIBRARY DESTINATION lib
-      ARCHIVE DESTINATION lib)
-
-  else (sawGalilController_FOUND)
-    message ("Information: sawGalilConsoleQt will not be compiled, it requires sawGalilController")
-  endif (sawGalilController_FOUND)
-else (cisst_FOUND_AS_REQUIRED)
-  message ("Information: sawGalilConsoleQt will not be compiled, it requires ${REQUIRED_CISST_LIBRARIES}")
-endif (cisst_FOUND_AS_REQUIRED)
+else (sawGalilController_FOUND)
+  message ("Information: sawGalilConsoleQt will not be compiled, it requires sawGalilController")
+endif (sawGalilController_FOUND)

@@ -1,5 +1,5 @@
 #
-# (C) Copyright 2024 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2024-2026 Johns Hopkins University (JHU), All Rights Reserved.
 #
 # --- begin cisst license - do not edit ---
 #
@@ -21,52 +21,43 @@ set (REQUIRED_CISST_LIBRARIES
   cisstParameterTypes)
 
 # find cisst and make sure the required libraries have been compiled
-find_package (cisst 1.2 COMPONENTS ${REQUIRED_CISST_LIBRARIES})
+find_package (cisst 1.2 REQUIRED COMPONENTS ${REQUIRED_CISST_LIBRARIES})
 
-if (cisst_FOUND_AS_REQUIRED)
+# catkin/ROS paths
+cisst_set_output_path ()
 
-  # load cisst configuration
-  include (${CISST_USE_FILE})
+find_package (sawGalilController
+  HINTS ${CMAKE_BINARY_DIR})
 
-  # catkin/ROS paths
-  cisst_set_output_path ()
+if (sawGalilController_FOUND)
 
-  find_package (sawGalilController
-    HINTS ${CMAKE_BINARY_DIR})
+  include_directories (${sawGalilController_INCLUDE_DIR})
+  link_directories (${sawGalilController_LIBRARY_DIR})
 
-  if (sawGalilController_FOUND)
+  add_executable (sawGalilConsole main.cpp)
+  add_executable (sawGalilAnalog analog.cpp)
 
-    include_directories (${sawGalilController_INCLUDE_DIR})
-    link_directories (${sawGalilController_LIBRARY_DIR})
+  target_link_libraries (sawGalilConsole
+                         ${sawGalilController_LIBRARIES}
+                         ${cisst_LIBRARIES})
+  target_link_libraries (sawGalilAnalog
+                         ${sawGalilController_LIBRARIES}
+                         ${cisst_LIBRARIES})
 
-    add_executable (sawGalilConsole main.cpp)
-    add_executable (sawGalilAnalog analog.cpp)
+  set_target_properties (sawGalilConsole PROPERTIES
+    COMPONENT sawGalilController-Examples
+    FOLDER "sawGalilController")
 
-    # link with the cisst libraries
-    cisst_target_link_libraries (sawGalilConsole ${REQUIRED_CISST_LIBRARIES})
-    cisst_target_link_libraries (sawGalilAnalog ${REQUIRED_CISST_LIBRARIES})
+  set_target_properties (sawGalilAnalog PROPERTIES
+    COMPONENT sawGalilController-Examples
+    FOLDER "sawGalilController")
 
-    # link with sawGalilController library
-    target_link_libraries (sawGalilConsole ${sawGalilController_LIBRARIES})
-    target_link_libraries (sawGalilAnalog ${sawGalilController_LIBRARIES})
+  install (TARGETS sawGalilAnalog
+    COMPONENT sawGalilController-Examples
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
 
-    set_target_properties (sawGalilConsole PROPERTIES
-      COMPONENT sawGalilController-Examples
-      FOLDER "sawGalilController")
-
-    set_target_properties (sawGalilAnalog PROPERTIES
-      COMPONENT sawGalilController-Examples
-      FOLDER "sawGalilController")
-
-    install (TARGETS sawGalilAnalog
-      COMPONENT sawGalilController-Examples
-      RUNTIME DESTINATION bin
-      LIBRARY DESTINATION lib
-      ARCHIVE DESTINATION lib)
-
-  else (sawGalilController_FOUND)
-    message ("Information: sawGalilConsole will not be compiled, it requires sawGalilController")
-  endif (sawGalilController_FOUND)
-else (cisst_FOUND_AS_REQUIRED)
-  message ("Information: sawGalilConsole will not be compiled, it requires ${REQUIRED_CISST_LIBRARIES}")
-endif (cisst_FOUND_AS_REQUIRED)
+else (sawGalilController_FOUND)
+  message ("Information: sawGalilConsole will not be compiled, it requires sawGalilController")
+endif (sawGalilController_FOUND)
